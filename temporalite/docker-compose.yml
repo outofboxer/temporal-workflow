@@ -1,0 +1,17 @@
+services:
+  temporalite:
+    image: temporalio/temporal:1.4.1
+    command: >
+      server start-dev
+      --ip 0.0.0.0
+      --port 7233
+      --ui-port 8233
+      --namespace default
+      --namespace fees
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+    volumes:
+      - temporalite-data:/var/lib/temporal
+volumes:
+  temporalite-data:
