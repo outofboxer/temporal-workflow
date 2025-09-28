@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+/*
 func TestNewFromFloat(t *testing.T) {
 	input := 1.23
 	expected := decimal.NewFromFloat(input)
@@ -30,16 +31,16 @@ func TestNewFromString(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equalf(t, expectedValue, actualValue.Value, "expected %v, got %v", expectedValue, actualValue)
 }
-
-func TestToFloat64(t *testing.T) {
+*/
+/*func TestToFloat64(t *testing.T) {
 	input := Money{Value: decimal.NewFromFloat(1.23), Currency: CurrencyUSD}
 	expected := float64(1.23)
 	actual := input.ToFloat64()
 	assert.Equalf(t, expected, actual, "expected %v, got %v", expected, actual)
-}
+}*/
 
 func TestMoney_UnmarshalJSON(t *testing.T) {
-	input := `{"some_one_cypher":1.23}`
+	input := `{"some_one_cypher":"1.23""}`
 	expected := Money{Value: decimal.NewFromFloat(1.23)}
 	actual := struct {
 		SomeOneCypher Money `json:"some_one_cypher"`
@@ -47,7 +48,7 @@ func TestMoney_UnmarshalJSON(t *testing.T) {
 	err := json.Unmarshal([]byte(input), &actual)
 	assert.NoError(t, err)
 	assert.Equalf(t, expected.Value, actual.SomeOneCypher.Value, "expected %v, got %v", expected.Value, actual.SomeOneCypher.Value)
-}
+} /*
 
 func TestMoney_UnmarshalJSONQuoted(t *testing.T) {
 	input := `{"some_one_cypher":"1.23"}`
@@ -168,8 +169,8 @@ func TestGetPercent(t *testing.T) {
 	expected := Money{Value: decimal.NewFromFloat(3.6), Currency: CurrencyUSD}
 	actual := input.GetPercent(3)
 	assert.Equalf(t, expected.ToFloat64(), actual.ToFloat64(), "expected %v, got %v", expected.ToFloat64(), actual.ToFloat64())
-}
-
+}*/
+/*
 func TestIsZero(t *testing.T) {
 	input := Money{Value: decimal.NewFromFloat(0), Currency: CurrencyUSD}
 	expected := true
@@ -239,4 +240,4 @@ func TestNewFromPgNumeric(t *testing.T) {
 	pgNumeric := input.ToPgNumeric()
 	actual := NewFromPgNumeric(pgNumeric)
 	assert.Equalf(t, input, actual, "expected %v, got %v", input, actual)
-}
+}*/

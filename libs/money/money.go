@@ -1,7 +1,6 @@
 package libmoney
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -101,6 +100,13 @@ func NewFomBigInt(i *big.Int, e int32, c Currency) Money {
 	}
 }
 
+func NewFomDecimal(v decimal.Decimal, c Currency) Money {
+	return Money{
+		Value:    v,
+		Currency: c,
+	}
+}
+
 func NewFromPgNumeric(n *pgtype.Numeric, c Currency) Money {
 	if n == nil {
 		return Money{}
@@ -112,17 +118,46 @@ func NewFromPgNumeric(n *pgtype.Numeric, c Currency) Money {
 	return NewFomBigInt(intN, n.Exp, c)
 }
 
+// UnmarshalJSON supports:
+//
+//	{"Value":"123.45","Currency":"USD"}  ← string (safe, recommended)
+//	{"Value":123.45,"Currency":"USD"}    ← number (also accepted)
 func (m *Money) UnmarshalJSON(data []byte) error {
-	data = bytes.TrimRight(bytes.TrimLeft(data, `"`), `"`)
-	if len(data) == 0 || string(data) == "null" {
-		return nil
+	// Decode into a light helper so we can parse Value flexibly.
+	var aux struct {
+		Value    json.RawMessage `json:"Value"`
+		Currency string          `json:"Currency"`
 	}
-	v, err := json.Number(data).Float64()
-	if err != nil {
-		return err
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("money: invalid json: %w", err)
 	}
-	*m = NewFromFloat(v, CurrencyNone)
+
+	// Parse Value using decimal's own JSON parser (works for "123.45" or 123.45).
+	var d decimal.Decimal
+	if len(aux.Value) == 0 || string(aux.Value) == "null" {
+		d = decimal.Zero
+	} else if err := d.UnmarshalJSON(aux.Value); err != nil {
+		return fmt.Errorf("money.value: %w", err)
+	}
+
+	//m.Value = d
+	//m.Currency = Currency(aux.Currency)
+	//d.BigInt()
+	//
+
+	*m = NewFomDecimal(d, Currency(aux.Currency))
 	return nil
+	//obj := json.
+	//data = bytes.TrimRight(bytes.TrimLeft(data, `"`), `"`)
+	//if len(data) == 0 || string(data) == "null" {
+	//	return nil
+	//}
+	//v, err := json.Number(data).Float64()
+	//if err != nil {
+	//	return err
+	//}
+	//*m = NewFromFloat(v, CurrencyNone)
+	//return nil
 }
 
 func (m *Money) Add(m2 ...Money) Money {
