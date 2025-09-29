@@ -1,10 +1,9 @@
-# URL Shortener Starter
+# Monthly Billing 
 
-This is an Encore starter for a URL Shortener. It has two API endpoints and a PostgreSQL database to store the URL IDs and retrieve the full URL given an ID.
+This is an Encore starter for a Monthly Billing. 
+<describe its functionality here>
 
-## Build from scratch with a tutorial
-
-If you prefer to built it yourself, check out the [tutorial](https://encore.dev/docs/go/tutorials/rest-api) to learn how to build this application from scratch.
+## Build from scratch
 
 ## Prerequisites 
 
@@ -17,17 +16,26 @@ If you prefer to built it yourself, check out the [tutorial](https://encore.dev/
 1. [Install Docker](https://docker.com)
 2. Start Docker
 
-## Create app
+**Run setup.sh**
 
-Create a local app from this template:
+Setup currently supported at macOS and Linux only. 
+It starts Temporal Dev Server (temporal.io) docker and registers search parameters in the Temporal Dev Server.
 
+On Windows, you could run setup manually from command line:
 ```bash
-encore app create my-app-name --example=url-shortener
+docker run --rm -p 7233:7233 -p 8233:8233 temporalio/temporal:latest server start-dev --ip 0.0.0.0
+temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
+temporal operator search-attribute create --namespace default --name BillingPeriodNum  --type Int
+temporal operator search-attribute create --namespace default --name BillStatus --type Keyword
+temporal operator search-attribute create --namespace default --name BillCurrency --type Keyword
+temporal operator search-attribute create --namespace default --name BillItemCount --type Int
+temporal operator search-attribute create --namespace default --name BillTotal --type Int
 ```
 
-## Run app locally
 
-Before running your application, make sure you have Docker installed and running. Then run this command from your application's root folder:
+## Run app
+
+Run app using command line from the root of this repository:
 
 ```bash
 encore run
@@ -70,32 +78,17 @@ Learn more in the [CLI docs](https://encore.dev/docs/go/cli/cli-reference#databa
 
 See the [self-hosting instructions](https://encore.dev/docs/go/self-host/docker-build) for how to use `encore build docker` to create a Docker image and configure it.
 
-### Encore Cloud Platform
-
-Deploy your application to a free staging environment in Encore's development cloud using `git push encore`:
-
-```bash
-git add -A .
-git commit -m 'Commit message'
-git push encore
-```
-
-You can also open your app in the [Cloud Dashboard](https://app.encore.dev) to integrate with GitHub, or connect your AWS/GCP account, enabling Encore to automatically handle cloud deployments for you.
-
-## Link to GitHub
-
-Follow these steps to link your app to GitHub:
-
-1. Create a GitHub repo, commit and push the app.
-2. Open your app in the [Cloud Dashboard](https://app.encore.dev).
-3. Go to **Settings ➔ GitHub** and click on **Link app to GitHub** to link your app to GitHub and select the repo you just created.
-4. To configure Encore to automatically trigger deploys when you push to a specific branch name, go to the **Overview** page for your intended environment. Click on **Settings** and then in the section **Branch Push** configure the **Branch name** and hit **Save**.
-5. Commit and push a change to GitHub to trigger a deploy.
-
-[Learn more in the docs](https://encore.dev/docs/platform/integrations/github)
-
 ## Testing
 
 ```bash
 encore test ./...
 ```
+
+
+This should be done at Temporal:
+-- 
+
+
+
+
+docker exec -it temporalite-temporalite-1 /bin/sh
