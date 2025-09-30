@@ -29,7 +29,7 @@ temporal operator search-attribute create --namespace default --name BillingPeri
 temporal operator search-attribute create --namespace default --name BillStatus --type Keyword
 temporal operator search-attribute create --namespace default --name BillCurrency --type Keyword
 temporal operator search-attribute create --namespace default --name BillItemCount --type Int
-temporal operator search-attribute create --namespace default --name BillTotal --type Int
+temporal operator search-attribute create --namespace default --name BillTotalCents --type Int
 ```
 
 
@@ -43,17 +43,35 @@ encore run
 
 ## Using the API
 
+### API Examples
 
-### url.shorten — Shortens a URL and adds it to the database
-
+Create a bill (currency: GEL or USD, period YYYY-MM):
 ```bash
-curl 'http://localhost:4000/url' -d '{"URL":"https://news.ycombinator.com"}'
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills' \
+  -H 'Content-Type: application/json' \
+  -d '{"currency":"USD","billingPeriod":"2025-09"}' | jq .
 ```
 
-### url.get — Gets a URL from the database using a short ID
-
+Add a line item (idempotent):
 ```bash
-curl 'http://127.0.0.1:4000/url/:id'
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/items' \
+  -H 'Content-Type: application/json' \
+  -d '{"description":"api fee","amount":"2.50","IdempotencyKey":"li-1"}' | jq .
+```
+
+Close the bill:
+```bash
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/close' | jq .
+```
+
+Get bill:
+```bash
+curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09' | jq .
+```
+
+List bills for customer (filter by status and period range):
+```bash
+curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills?status=OPEN&from=2025-01&to=2025-12' | jq .
 ```
 
 ## Open the developer dashboard
@@ -85,10 +103,6 @@ encore test ./...
 ```
 
 
-This should be done at Temporal:
--- 
-
-
-
-
-docker exec -it temporalite-temporalite-1 /bin/sh
+Task queues and config:
+- Worker registers workflows on task queue `FEES_TASK_QUEUE` (see `fees/services/worker/service.go`).
+- API starts workflows with the same task queue via the Temporal gateway.
