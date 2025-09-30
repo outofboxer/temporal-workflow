@@ -19,8 +19,8 @@ const (
 )
 
 type Money struct {
-	Value    decimal.Decimal
-	Currency Currency
+	value    decimal.Decimal
+	currency Currency
 }
 
 func SupportedCurrency(currency Currency) bool {
@@ -35,23 +35,30 @@ func NewFromFloat[fl float32 | float64](v fl, c Currency) Money {
 		return Money{}
 	}
 	return Money{
-		Value:    decimal.NewFromFloat(v2),
-		Currency: c,
+		value:    decimal.NewFromFloat(v2),
+		currency: c,
+	}
+}
+
+func NewResetCurrency(v Money, c Currency) Money {
+	return Money{
+		value:    v.value,
+		currency: c,
 	}
 }
 
 func NewFromInt[i int | int8 | int16 | int32 | int64](m i, c Currency) Money {
 	return Money{
-		Value:    decimal.NewFromInt(int64(m)),
-		Currency: c,
+		value:    decimal.NewFromInt(int64(m)),
+		currency: c,
 	}
 }
 
 func NewFromString(m string, c Currency) (Money, error) {
 	if m == "" {
 		return Money{
-			Value:    decimal.Zero,
-			Currency: c,
+			value:    decimal.Zero,
+			currency: c,
 		}, fmt.Errorf("empty string")
 	}
 	v, err := decimal.NewFromString(m)
@@ -59,8 +66,8 @@ func NewFromString(m string, c Currency) (Money, error) {
 		return Money{}, err
 	}
 	return Money{
-		Value:    v,
-		Currency: c,
+		value:    v,
+		currency: c,
 	}, nil
 }
 
@@ -68,7 +75,7 @@ func NewFromString(m string, c Currency) (Money, error) {
 // Alias for Amount.Float64().
 // TODO thing about round and precision.
 func (m *Money) ToFloat64() float64 {
-	v, _ := m.Value.Float64()
+	v, _ := m.value.Float64()
 	return v
 }
 
@@ -78,11 +85,11 @@ func (m *Money) ToFront() float64 {
 }
 
 func (m *Money) ToInt64() int64 {
-	return m.Value.IntPart()
+	return m.value.IntPart()
 }
 
 func (m *Money) ToString() string {
-	return m.Value.String()
+	return m.value.String()
 }
 
 func (m *Money) ToPgNumeric() *pgtype.Numeric {
@@ -95,15 +102,15 @@ func (m *Money) ToPgNumeric() *pgtype.Numeric {
 
 func NewFomBigInt(i *big.Int, e int32, c Currency) Money {
 	return Money{
-		Value:    decimal.NewFromBigInt(i, e),
-		Currency: c,
+		value:    decimal.NewFromBigInt(i, e),
+		currency: c,
 	}
 }
 
 func NewFomDecimal(v decimal.Decimal, c Currency) Money {
 	return Money{
-		Value:    v,
-		Currency: c,
+		value:    v,
+		currency: c,
 	}
 }
 
@@ -161,63 +168,81 @@ func (m *Money) UnmarshalJSON(data []byte) error {
 }
 
 func (m *Money) Add(m2 ...Money) Money {
-	res := m.Value
+	res := m.value
 	for _, v := range m2 {
-		res = res.Add(v.Value)
+		res = res.Add(v.value)
 	}
 	return Money{
-		Value:    res,
-		Currency: m.Currency,
+		value:    res,
+		currency: m.currency,
 	}
 }
 
 func (m *Money) Sub(m2 ...Money) Money {
-	res := m.Value
+	res := m.value
 	for _, v := range m2 {
-		res = res.Sub(v.Value)
+		res = res.Sub(v.value)
 	}
 	return Money{
-		Value:    res,
-		Currency: m.Currency,
+		value:    res,
+		currency: m.currency,
 	}
 }
 
 func (m *Money) Mul(m2 Money) Money {
 	return Money{
-		Value:    m.Value.Mul(m2.Value),
-		Currency: m.Currency,
+		value:    m.value.Mul(m2.value),
+		currency: m.currency,
 	}
 }
 
 // MulOnInt multiplies the Money value by the given int64 value.
 func (m *Money) MulOnInt(m2 int64) Money {
 	return Money{
-		Value:    m.Value.Mul(decimal.NewFromInt(m2)),
-		Currency: m.Currency,
+		value:    m.value.Mul(decimal.NewFromInt(m2)),
+		currency: m.currency,
 	}
 }
 
 // MulOnFloat multiplies the Money value by the given int64 value.
 func (m *Money) MulOnFloat(m2 float64) Money {
 	return Money{
-		Value:    m.Value.Mul(decimal.NewFromFloat(m2)),
-		Currency: m.Currency,
+		value:    m.value.Mul(decimal.NewFromFloat(m2)),
+		currency: m.currency,
+	}
+}
+
+func (m *Money) MulOnDecimal(m2 decimal.Decimal) *Money {
+	return &Money{
+		value:    m.value.Mul(m2),
+		currency: m.currency,
+	}
+}
+
+func (m *Money) IntPart() int64 {
+	return m.value.IntPart()
+}
+
+func (m *Money) Round(places int32) *Money {
+	return &Money{
+		value:    m.value.Round(places),
+		currency: m.currency,
 	}
 }
 
 func (m *Money) Div(m2 Money) Money {
-	res := m.Value.Div(m2.Value)
+	res := m.value.Div(m2.value)
 	return Money{
-		Value:    res,
-		Currency: m.Currency,
+		value:    res,
+		currency: m.currency,
 	}
 }
 
 func (m *Money) Abs() Money {
-	res := m.Value.Abs()
+	res := m.value.Abs()
 	return Money{
-		Value:    res,
-		Currency: m.Currency,
+		value:    res,
+		currency: m.currency,
 	}
 }
 
@@ -227,29 +252,29 @@ func (m *Money) Abs() Money {
 //	 0 if m == m2
 //	+1 if m >  m2
 func (m *Money) Cmp(m2 Money) int {
-	return m.Value.Cmp(m2.Value)
+	return m.value.Cmp(m2.value)
 }
 
 func (m *Money) IsPositive() bool {
-	return m.Value.IsPositive()
+	return m.value.IsPositive()
 }
 
 func (m *Money) IsNegative() bool {
-	return m.Value.IsNegative()
+	return m.value.IsNegative()
 }
 
 func (m *Money) GetPercent(percent float64) Money {
-	return NewFromFloat(m.ToFloat64()*percent/100, m.Currency)
+	return NewFromFloat(m.ToFloat64()*percent/100, m.currency)
 }
 
 func (m *Money) IsZero() bool {
-	return m.Value.IsZero()
+	return m.value.IsZero()
 }
 
 // Neg returns -m.
 func (m *Money) Neg() Money {
 	return Money{
-		Value:    m.Value.Neg(),
-		Currency: m.Currency,
+		value:    m.value.Neg(),
+		currency: m.currency,
 	}
 }
