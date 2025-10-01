@@ -1,0 +1,56 @@
+version: "2"
+run:
+  allow-parallel-runners: true
+linters:
+  default: all
+  disable:
+    - depguard
+    - errname
+    - exhaustruct
+    - gochecknoglobals
+    - godox
+    - ireturn
+    - tagliatelle
+    - varnamelen
+    - wrapcheck
+    - wsl
+    - err113
+    - tagalign
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - .*_gen.go$
+      - .*_test.go$
+      - .*.pb.go$
+      - proto/gen
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    cyclop:
+      max-complexity: 20
+    funlen:
+      lines: 120
+      statements: 70
+    nestif:
+      min-complexity: 15
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - .*_gen.go$
+      - .*_test.go$
+      - .*.pb.go$
+      - proto/gen
+      - third_party$
+      - builtin$
+      - examples$

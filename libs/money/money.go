@@ -2,6 +2,7 @@ package libmoney
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -34,6 +35,7 @@ func NewFromFloat[fl float32 | float64](v fl, c Currency) Money {
 	} else if math.IsInf(v2, 0) {
 		return Money{}
 	}
+
 	return Money{
 		value:    decimal.NewFromFloat(v2),
 		currency: c,
@@ -59,45 +61,17 @@ func NewFromString(m string, c Currency) (Money, error) {
 		return Money{
 			value:    decimal.Zero,
 			currency: c,
-		}, fmt.Errorf("empty string")
+		}, errors.New("empty string")
 	}
 	v, err := decimal.NewFromString(m)
 	if err != nil {
 		return Money{}, err
 	}
+
 	return Money{
 		value:    v,
 		currency: c,
 	}, nil
-}
-
-// ToFloat64 returns the float64 representation of the Money value.
-// Alias for Amount.Float64().
-// TODO thing about round and precision.
-func (m *Money) ToFloat64() float64 {
-	v, _ := m.value.Float64()
-	return v
-}
-
-// deprecated
-func (m *Money) ToFront() float64 {
-	return m.ToFloat64()
-}
-
-func (m *Money) ToInt64() int64 {
-	return m.value.IntPart()
-}
-
-func (m *Money) ToString() string {
-	return m.value.String()
-}
-
-func (m *Money) ToPgNumeric() *pgtype.Numeric {
-	var numeric pgtype.Numeric
-	if err := numeric.Scan(m.ToString()); err != nil {
-		return nil
-	}
-	return &numeric
 }
 
 func NewFomBigInt(i *big.Int, e int32, c Currency) Money {
@@ -122,7 +96,51 @@ func NewFromPgNumeric(n *pgtype.Numeric, c Currency) Money {
 	if intN == nil {
 		return Money{}
 	}
+
 	return NewFomBigInt(intN, n.Exp, c)
+}
+
+// ToFloat64 returns the float64 representation of the Money value.
+// Alias for Amount.Float64().
+// TODO thing about round and precision.
+func (m *Money) ToFloat64() float64 {
+	v, _ := m.value.Float64()
+
+	return v
+}
+
+func (m *Money) ToInt64() int64 {
+	return m.value.IntPart()
+}
+
+func (m *Money) ToString() string {
+	return m.value.String()
+}
+
+func (m *Money) ToPgNumeric() *pgtype.Numeric {
+	var numeric pgtype.Numeric
+	if err := numeric.Scan(m.ToString()); err != nil {
+		return nil
+	}
+
+	return &numeric
+}
+
+// MarshalJSON outputs Money as JSON in the format:
+//
+//	{"Value":"123.45","Currency":"USD"}
+//
+// "Value" is emitted as a string to avoid precision loss.
+func (m Money) MarshalJSON() ([]byte, error) {
+	type out struct {
+		Value    string `json:"Value"`
+		Currency string `json:"Currency"`
+	}
+
+	return json.Marshal(out{
+		Value:    m.value.String(), // or m.ToString()
+		Currency: string(m.currency),
+	})
 }
 
 // UnmarshalJSON supports:
@@ -147,24 +165,9 @@ func (m *Money) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("money.value: %w", err)
 	}
 
-	//m.Value = d
-	//m.Currency = Currency(aux.Currency)
-	//d.BigInt()
-	//
-
 	*m = NewFomDecimal(d, Currency(aux.Currency))
+
 	return nil
-	//obj := json.
-	//data = bytes.TrimRight(bytes.TrimLeft(data, `"`), `"`)
-	//if len(data) == 0 || string(data) == "null" {
-	//	return nil
-	//}
-	//v, err := json.Number(data).Float64()
-	//if err != nil {
-	//	return err
-	//}
-	//*m = NewFromFloat(v, CurrencyNone)
-	//return nil
 }
 
 func (m *Money) Add(m2 ...Money) Money {
@@ -172,6 +175,7 @@ func (m *Money) Add(m2 ...Money) Money {
 	for _, v := range m2 {
 		res = res.Add(v.value)
 	}
+
 	return Money{
 		value:    res,
 		currency: m.currency,
@@ -183,6 +187,7 @@ func (m *Money) Sub(m2 ...Money) Money {
 	for _, v := range m2 {
 		res = res.Sub(v.value)
 	}
+
 	return Money{
 		value:    res,
 		currency: m.currency,
@@ -232,6 +237,7 @@ func (m *Money) Round(places int32) *Money {
 
 func (m *Money) Div(m2 Money) Money {
 	res := m.value.Div(m2.value)
+
 	return Money{
 		value:    res,
 		currency: m.currency,
@@ -240,6 +246,7 @@ func (m *Money) Div(m2 Money) Money {
 
 func (m *Money) Abs() Money {
 	res := m.value.Abs()
+
 	return Money{
 		value:    res,
 		currency: m.currency,
@@ -264,7 +271,7 @@ func (m *Money) IsNegative() bool {
 }
 
 func (m *Money) GetPercent(percent float64) Money {
-	return NewFromFloat(m.ToFloat64()*percent/100, m.currency)
+	return NewFromFloat(m.ToFloat64()*percent/100, m.currency) //nolint:mnd
 }
 
 func (m *Money) IsZero() bool {
