@@ -1,15 +1,96 @@
 # Monthly Billing System
 
-A comprehensive monthly billing system built with **Encore** and **Temporal** for progressive fee accrual and invoice management. This system demonstrates enterprise-grade patterns including Clean Architecture, Domain-Driven Design, and Temporal workflow orchestration.
 
-## Overview
+## Build from scratch
 
-This system provides a complete billing solution that:
-- **Creates monthly bills** for customers with configurable currencies (USD/GEL)
-- **Accrues fees progressively** by adding line items throughout the billing period
-- **Closes bills** when the billing period ends, triggering invoice generation
-- **Maintains data consistency** through Temporal workflows and idempotency
-- **Provides comprehensive APIs** for bill management and querying
+Setup currently supported at macOS and Linux only.
+
+## Prerequisites
+
+**1. Install Encore:**
+- **macOS:** `brew install encoredev/tap/encore`
+- **Linux:** `curl -L https://encore.dev/install.sh | bash`
+- **Windows:** `iwr https://encore.dev/install.ps1 | iex`
+
+**2. Docker:**
+1. [Install Docker](https://docker.com)
+2. Start Docker
+
+**3. Configure temporal:**
+
+3a. If you have local Temporal dev server
+https://learn.temporal.io/getting_started/typescript/dev_environment/
+
+The project configs assume ir should be available:
+* The Temporal Service be available on localhost:7233.
+* The Temporal Web UI be available at http://localhost:8233.
+
+Run the shell command at the project root dir for local Temporal to setup search attributes:
+```bash
+make init-temporal
+```
+
+3b. If you don't want to install dev Temporal
+Run it in docker by this command, this starts Temporal Dev server and configures search attributes:
+```bash
+make init-temporal-docker
+```
+
+## Testing
+
+Download dependencies and run test (this will run 'encore run'):
+```bash
+make compile
+```
+
+## Run app
+
+Run app using command line from the root of this repository:
+
+```bash
+encore run
+```
+
+
+## Using the API (test cases)
+
+### API Examples
+
+Create a bill (currency: GEL or USD, period YYYY-MM):
+```bash
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills' \
+  -H 'Content-Type: application/json' \
+  -d '{"currency":"USD","billingPeriod":"2025-09"}' | jq .
+```
+
+Add a line item (idempotent):
+```bash
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/items' \
+  -H 'Content-Type: application/json' \
+  -d '{"description":"api fee","amount":"2.50","IdempotencyKey":"li-1"}' | jq .
+```
+
+Get bill:
+```bash
+curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09' | jq .
+```
+
+List bills for customer (filter by status and period range):
+```bash
+curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills?status=OPEN&from=2025-01&to=2025-12' | jq .
+```
+
+Close the bill:
+```bash
+curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/close' | jq .
+```
+
+## Open the developer dashboard
+
+While `encore run` is running, open [http://localhost:9400/](http://localhost:9400/) to access Encore's [local developer dashboard](https://encore.dev/docs/go/observability/dev-dash).
+
+Here you can see traces for all your requests, view your architecture diagram, and see API docs in the Service Catalog.
+
 
 ## Architecture
 
@@ -196,48 +277,8 @@ ERROR ← ERROR
 - **CLOSED**: Bill is finalized and no longer accepting items
 - **ERROR**: Bill encountered an error during processing
 
-## Testing Strategy
 
-### Comprehensive Test Coverage
 
-The system includes extensive testing at all layers:
-
-#### **Domain Tests** (`fees/domain/`)
-- ✅ Bill state transitions and business rules
-- ✅ Line item idempotency and currency handling
-- ✅ Total calculation and consistency checks
-
-#### **Use Case Tests** (`fees/app/usecases/`)
-- ✅ All business logic scenarios
-- ✅ Error handling and edge cases
-- ✅ Mock-based testing with testify
-
-#### **Workflow Tests** (`fees/app/workflows/`)
-- ✅ Temporal workflow execution
-- ✅ Signal handling and state management
-- ✅ Activity execution and error scenarios
-
-#### **API Tests** (`fees/services/feesapi/`)
-- ✅ REST endpoint functionality
-- ✅ Request validation and error responses
-- ✅ Integration with use cases
-
-#### **Gateway Tests** (`fees/internal/adapters/temporal/`)
-- ✅ Temporal client interactions
-- ✅ Search attribute handling
-- ✅ Error mapping and propagation
-
-### Test Execution
-
-```bash
-# Run all tests
-encore test ./...
-
-# Run specific test suites
-encore test ./fees/domain/... -v
-encore test ./fees/app/usecases/... -v
-encore test ./fees/services/feesapi/... -v
-```
 
 ## Configuration
 
@@ -256,167 +297,3 @@ The system uses Encore's configuration system with environment-specific settings
     }
 }
 ```
-
-### Temporal Setup
-
-The system requires Temporal search attributes to be registered:
-
-```bash
-temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
-temporal operator search-attribute create --namespace default --name BillingPeriodNum --type Int
-temporal operator search-attribute create --namespace default --name BillStatus --type Keyword
-temporal operator search-attribute create --namespace default --name BillCurrency --type Keyword
-temporal operator search-attribute create --namespace default --name BillItemCount --type Int
-temporal operator search-attribute create --namespace default --name BillTotalCents --type Int
-```
-
-## Error Handling
-
-### Error Types and Mapping
-
-The system implements comprehensive error handling:
-
-| Domain Error | HTTP Status | Description |
-|--------------|-------------|-------------|
-| `ErrBillWithPeriodAlreadyStarted` | 409 Conflict | Bill already exists for customer/period |
-| `ErrLineItemAlreadyAdded` | 409 Conflict | Line item already added (idempotency) |
-| `ErrBillNotFound` | 404 Not Found | Bill does not exist |
-| `ErrBillAlreadyClosed` | 412 Precondition Failed | Bill is already closed |
-| Validation Errors | 400 Bad Request | Invalid input data |
-
-### Error Response Format
-
-```json
-{
-  "code": "invalid_argument",
-  "message": "Validation failed for field 'Currency' with rule 'oneof'",
-  "details": []
-}
-```
-
-## Performance Considerations
-
-### Scalability Features
-
-- **Temporal Workflows**: Horizontal scaling through Temporal's distributed execution
-- **Search Attributes**: Efficient querying and filtering of bills
-- **Idempotency**: Safe retry mechanisms for external integrations
-- **Async Processing**: Non-blocking invoice generation and charging
-
-### Monitoring and Observability
-
-- **Encore Dashboard**: Built-in request tracing and metrics
-- **Temporal UI**: Workflow execution monitoring
-- **Structured Logging**: Comprehensive logging with context
-- **Error Tracking**: Detailed error reporting and stack traces
-
-## Security Considerations
-
-- **Input Validation**: Comprehensive validation using go-playground/validator
-- **Idempotency Keys**: Prevent duplicate operations and ensure data consistency
-- **Currency Handling**: Precise decimal arithmetic for financial calculations
-- **Error Sanitization**: Safe error messages without sensitive data exposure
-
-## Build from scratch
-
-## Prerequisites 
-
-**Install Encore:**
-- **macOS:** `brew install encoredev/tap/encore`
-- **Linux:** `curl -L https://encore.dev/install.sh | bash`
-- **Windows:** `iwr https://encore.dev/install.ps1 | iex`
-  
-**Docker:**
-1. [Install Docker](https://docker.com)
-2. Start Docker
-
-**Run setup.sh**
-
-Setup currently supported at macOS and Linux only. 
-It starts Temporal Dev Server (temporal.io) docker and registers search parameters in the Temporal Dev Server.
-
-On Windows, you could run setup manually from command line:
-```bash
-docker run --rm -p 7233:7233 -p 8233:8233 temporalio/temporal:latest server start-dev --ip 0.0.0.0
-temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
-temporal operator search-attribute create --namespace default --name BillingPeriodNum  --type Int
-temporal operator search-attribute create --namespace default --name BillStatus --type Keyword
-temporal operator search-attribute create --namespace default --name BillCurrency --type Keyword
-temporal operator search-attribute create --namespace default --name BillItemCount --type Int
-temporal operator search-attribute create --namespace default --name BillTotalCents --type Int
-```
-
-
-## Run app
-
-Run app using command line from the root of this repository:
-
-```bash
-encore run
-```
-
-## Using the API
-
-### API Examples
-
-Create a bill (currency: GEL or USD, period YYYY-MM):
-```bash
-curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills' \
-  -H 'Content-Type: application/json' \
-  -d '{"currency":"USD","billingPeriod":"2025-09"}' | jq .
-```
-
-Add a line item (idempotent):
-```bash
-curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/items' \
-  -H 'Content-Type: application/json' \
-  -d '{"description":"api fee","amount":"2.50","IdempotencyKey":"li-1"}' | jq .
-```
-
-Close the bill:
-```bash
-curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/close' | jq .
-```
-
-Get bill:
-```bash
-curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09' | jq .
-```
-
-List bills for customer (filter by status and period range):
-```bash
-curl -sS 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills?status=OPEN&from=2025-01&to=2025-12' | jq .
-```
-
-## Open the developer dashboard
-
-While `encore run` is running, open [http://localhost:9400/](http://localhost:9400/) to access Encore's [local developer dashboard](https://encore.dev/docs/go/observability/dev-dash).
-
-Here you can see traces for all your requests, view your architecture diagram, and see API docs in the Service Catalog.
-
-## Connecting to databases
-
-You can connect to your databases via psql shell:
-
-```bash
-encore db shell <database-name> --env=local --superuser
-```
-
-Learn more in the [CLI docs](https://encore.dev/docs/go/cli/cli-reference#database-management).
-
-## Deployment
-
-### Self-hosting
-
-See the [self-hosting instructions](https://encore.dev/docs/go/self-host/docker-build) for how to use `encore build docker` to create a Docker image and configure it.
-
-## Testing
-
-```bash
-encore test ./...
-```
-
-
-Task queues and config:
-- Worker registers workflows on task queue `FEES_TASK_QUEUE` (see `fees/services/worker/service.go`).
-- API starts workflows with the same task queue via the Temporal gateway.
