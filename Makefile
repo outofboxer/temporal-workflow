@@ -19,6 +19,7 @@ setup: golangci-install mod-download
 init-temporal-docker:
 	@echo "  >  Temporal install & configuration "
 	docker run --name temporal-dev --rm -d -p 7233:7233 -p 8233:8233 temporalio/temporal:latest server start-dev --ip 0.0.0.0
+	@sleep 5
 	docker exec -it temporal-dev temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
 	docker exec -it temporal-dev temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
 	docker exec -it temporal-dev temporal operator search-attribute create --namespace default --name BillingPeriodNum --type Int

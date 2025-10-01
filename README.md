@@ -21,7 +21,7 @@ Setup currently supported at macOS and Linux only.
 3a. If you have local Temporal dev server
 https://learn.temporal.io/getting_started/typescript/dev_environment/
 
-The project configs assume ir should be available:
+The project configs assume it should be available:
 * The Temporal Service be available on localhost:7233.
 * The Temporal Web UI be available at http://localhost:8233.
 
@@ -88,6 +88,8 @@ curl -sS -X POST 'http://127.0.0.1:4000/api/v1/customers/cust-1/bills/2025-09/cl
 ## Open the developer dashboard
 
 While `encore run` is running, open [http://localhost:9400/](http://localhost:9400/) to access Encore's [local developer dashboard](https://encore.dev/docs/go/observability/dev-dash).
+
+Encore app name is "temporal-workflow" in the developer dashboard.
 
 Here you can see traces for all your requests, view your architecture diagram, and see API docs in the Service Catalog.
 
@@ -269,7 +271,7 @@ The bill follows a strict state machine:
 ```
 OPEN → PENDING → CLOSED
   ↓       ↓
-ERROR ← ERROR
+ERROR   ERROR
 ```
 
 - **OPEN**: Bill is active and accepting line items
