@@ -1,1 +1,1 @@
-PostgreDSN: "asd"
+PostgreDSN: "test"
