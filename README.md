@@ -36,6 +36,18 @@ Run it in docker by this command, this starts Temporal Dev server and configures
 make init-temporal-docker
 ```
 
+3c. Alternatively, one can setup the project Temporal search parameters manually:
+
+```bash
+temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
+temporal operator search-attribute create --namespace default --name CustomerID --type Keyword
+temporal operator search-attribute create --namespace default --name BillingPeriodNum --type Int
+temporal operator search-attribute create --namespace default --name BillStatus --type Keyword
+temporal operator search-attribute create --namespace default --name BillCurrency --type Keyword
+temporal operator search-attribute create --namespace default --name BillItemCount --type Int
+temporal operator search-attribute create --namespace default --name BillTotalCents --type Int
+```
+
 ## Testing
 
 Download dependencies and run test (this will run 'encore run'):

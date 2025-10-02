@@ -16,6 +16,9 @@ linters:
     - wsl
     - err113
     - tagalign
+    - wsl_v5
+    - noinlineerr
+    - godoclint
   exclusions:
     generated: lax
     presets:
